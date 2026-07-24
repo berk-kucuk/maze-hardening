@@ -1,0 +1,17 @@
+# maze-hardening.install — apply the sysctl profile immediately so hardening is
+# live without a reboot.
+
+_apply_sysctl() {
+    if [ -d /run/systemd/system ] && command -v sysctl >/dev/null 2>&1; then
+        sysctl --system >/dev/null 2>&1 || true
+    fi
+}
+
+post_install() {
+    _apply_sysctl
+    echo ">> maze-hardening: sysctl hardening profile applied."
+}
+
+post_upgrade() {
+    _apply_sysctl
+}
