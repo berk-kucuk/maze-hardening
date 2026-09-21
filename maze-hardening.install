@@ -1,5 +1,5 @@
 # maze-hardening.install — apply the sysctl profile immediately so hardening is
-# live without a reboot.
+# live without a reboot, and silence the LAN-presence daemons once.
 
 _apply_sysctl() {
     if [ -d /run/systemd/system ] && command -v sysctl >/dev/null 2>&1; then
@@ -7,11 +7,54 @@ _apply_sysctl() {
     fi
 }
 
+# passim (pulled in by fwupd, a static unit) shares fwupd's firmware cache
+# over the LAN and advertises it through avahi, which it socket-activates.
+# Neither belongs on a privacy desktop by default. Masking is the only thing
+# that sticks: passim is static (no enable state to disable) and avahi is
+# started by passim's Wants= regardless of its own enable state.
+#
+# This is done ONCE — recorded by a marker — so an admin who deliberately
+# unmasks avahi (network printer discovery, for example) is not overridden by
+# the next upgrade. `systemctl mask` only writes symlinks, so this also works
+# in the ISO build chroot (the live medium gets it too, and the marker travels
+# to the installed system through unpackfs). The stop/restart half needs a
+# running systemd and is skipped there.
+_LAN_MARK=/var/lib/maze/hardening-lan-silenced
+_silence_lan() {
+    [ -e "$_LAN_MARK" ] && return 0
+    systemctl mask passim.service avahi-daemon.socket avahi-daemon.service >/dev/null 2>&1 || true
+    if [ -d /run/systemd/system ]; then
+        systemctl stop passim.service avahi-daemon.socket avahi-daemon.service >/dev/null 2>&1 || true
+        systemctl restart systemd-resolved.service >/dev/null 2>&1 || true
+    fi
+    mkdir -p "$(dirname "$_LAN_MARK")" 2>/dev/null && : > "$_LAN_MARK" 2>/dev/null || true
+    echo ">> maze-hardening: passim and avahi-daemon masked (no mDNS/LLMNR presence on the LAN)."
+    echo ">> maze-hardening: to undo: sudo systemctl unmask avahi-daemon.socket avahi-daemon.service"
+}
+
+# The udev rule and the blacklist take effect on the next boot by themselves;
+# on a live system also unload wl right away if it is loaded on a machine with
+# no Broadcom controller (the case the rule exists for). Unloading is safe there:
+# nothing is bound to it.
+_unload_stray_wl() {
+    [ -d /run/systemd/system ] || return 0
+    grep -qE '^wl ' /proc/modules 2>/dev/null || return 0
+    if ! lspci -n 2>/dev/null | grep -qE ' 14e4:'; then
+        modprobe -r wl >/dev/null 2>&1 \
+            && echo ">> maze-hardening: unloaded the stray Broadcom wl module (no Broadcom hardware here)."
+    fi
+    udevadm control --reload-rules >/dev/null 2>&1 || true
+}
+
 post_install() {
     _apply_sysctl
+    _silence_lan
+    _unload_stray_wl
     echo ">> maze-hardening: sysctl hardening profile applied."
 }
 
 post_upgrade() {
     _apply_sysctl
+    _silence_lan
+    _unload_stray_wl
 }

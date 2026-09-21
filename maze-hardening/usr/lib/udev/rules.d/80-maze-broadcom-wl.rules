@@ -1,0 +1,13 @@
+# Maze Linux (maze-hardening) — load the proprietary Broadcom `wl` driver ONLY
+# when a Broadcom network controller is present.
+#
+# The driver is blacklisted for alias autoloading (see
+# /usr/lib/modprobe.d/10-maze-broadcom-wl.conf for why: its wildcard alias
+# matches every class-0280 network controller, Intel included). An explicit
+# modprobe is not subject to the blacklist, so this rule restores the
+# out-of-the-box behaviour for the hardware that actually needs it.
+#
+# vendor 0x14e4 = Broadcom, class 0x028000 = network controller / other (the
+# class wl's own alias targets). No device-id list: wl decides for itself
+# whether it drives the chip, exactly as it did when udev loaded it by alias.
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x14e4", ATTR{class}=="0x028000", RUN+="/usr/bin/modprobe wl"
