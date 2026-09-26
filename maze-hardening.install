@@ -46,6 +46,21 @@ _unload_stray_wl() {
     udevadm control --reload-rules >/dev/null 2>&1 || true
 }
 
+# The wheel sudo rule is packaged now (/etc/sudoers.d/00-maze-wheel). Older
+# installs got the identical rule written by the installer as 10-maze-wheel.
+# Remove that copy — but only when it is exactly the installer's rule and the
+# packaged file parses, so an admin's own edits, or a broken packaged file,
+# can never leave wheel without sudo.
+_tidy_old_wheel_rule() {
+    _old=/etc/sudoers.d/10-maze-wheel
+    _new=/etc/sudoers.d/00-maze-wheel
+    [ -f "$_old" ] && [ -f "$_new" ] || return 0
+    [ "$(grep -v '^[[:space:]]*#' "$_old" | sed '/^[[:space:]]*$/d')" = '%wheel ALL=(ALL:ALL) ALL' ] || return 0
+    command -v visudo >/dev/null 2>&1 && visudo -cf "$_new" >/dev/null 2>&1 || return 0
+    rm -f "$_old" \
+        && echo ">> maze-hardening: 10-maze-wheel replaced by the packaged 00-maze-wheel (same rule: wheel, with password)."
+}
+
 post_install() {
     _apply_sysctl
     _silence_lan
@@ -57,4 +72,5 @@ post_upgrade() {
     _apply_sysctl
     _silence_lan
     _unload_stray_wl
+    _tidy_old_wheel_rule
 }

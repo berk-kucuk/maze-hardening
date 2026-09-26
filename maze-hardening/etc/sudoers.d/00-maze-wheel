@@ -1,0 +1,8 @@
+# Maze Linux (maze-hardening): members of group wheel may use sudo — with their
+# own password.
+#
+# Named 00-* on purpose. sudo reads /etc/sudoers.d in lexical order and the LAST
+# matching rule wins. On the live ISO the passwordless 10-maze rule sorts after
+# this one and wins; the installer deletes 10-maze, and this rule is what every
+# installed system is left with.
+%wheel ALL=(ALL:ALL) ALL

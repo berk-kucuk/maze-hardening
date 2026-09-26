@@ -1,0 +1,20 @@
+# maze-hardening: NetworkManager is Maze's one network manager.
+#
+# systemd's own preset (90-systemd.preset) enables systemd-networkd and
+# systemd-networkd-wait-online. Presets are applied on a system's first boot
+# (no /etc/machine-id yet) — which is EVERY boot of the live ISO. The live
+# system then ran NetworkManager and systemd-networkd side by side on the same
+# interfaces, and systemd-networkd-wait-online held network-online.target (and
+# everything ordered after it: entropy-shield, reflector, maze-flatpak-setup,
+# ollama) for its full 2-minute timeout whenever networkd had no link of its
+# own to bring up — i.e. on Wi-Fi, which NetworkManager handles.
+#
+# This file sorts before 90-systemd.preset, so its lines win. The installed
+# system never re-applies presets on its own (its machine-id is set at install
+# time); maze-installer disables these units there explicitly.
+disable systemd-networkd.service
+disable systemd-networkd.socket
+disable systemd-networkd-*.socket
+disable systemd-networkd-wait-online.service
+disable systemd-networkd-wait-online@.service
+disable systemd-networkd-persistent-storage.service

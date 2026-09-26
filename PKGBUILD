@@ -36,7 +36,7 @@
 
 pkgname=maze-hardening
 pkgver=1.0.0
-pkgrel=4
+pkgrel=8
 pkgdesc="Maze Linux kernel & network hardening defaults (sysctl profile, LAN-silence, Broadcom wl gating)"
 arch=('any')
 url="https://mazelinux.berkkucukk.com.tr"
@@ -45,10 +45,29 @@ install="${pkgname}.install"
 backup=(
   'etc/sysctl.d/99-maze-hardening.conf'
   'etc/systemd/resolved.conf.d/zz-maze-privacy.conf'
+  # ── Adopted from the ISO's airootfs (2026-09) ──────────────────────────────
+  # These used to exist only in the live image, so installed machines carried
+  # them UNOWNED and no update ever reached them. They are in backup=() so the
+  # takeover is silent: pacman does not treat an existing unowned file that the
+  # package lists as a backup as a conflict — an identical copy is simply
+  # adopted, a locally edited one is kept and the packaged one lands as .pacnew.
+  # Without this, `pacman -Syu` on every installed Maze would stop with
+  # "exists in filesystem" until the user ran --overwrite by hand.
+  'etc/ssh/sshd_config.d/00-maze-hardening.conf'
+  'etc/audit/rules.d/maze.rules'
+  'etc/systemd/zram-generator.conf'
+  'etc/systemd/oomd.conf.d/10-maze.conf'
+  'etc/systemd/system/-.slice.d/10-oomd.conf'
+  'etc/systemd/system/user@.service.d/10-oomd.conf'
+  'etc/sudoers.d/00-maze-wheel'
 )
 source=()
 
 package() {
   cp -a "${startdir}/maze-hardening/etc" "${pkgdir}/etc"
   cp -a "${startdir}/maze-hardening/usr" "${pkgdir}/usr"
+  # sudo ignores a sudoers file that is group/world-writable or not owned by
+  # root, and the directory itself belongs to the sudo package with 0750.
+  chmod 0750 "${pkgdir}/etc/sudoers.d"
+  chmod 0440 "${pkgdir}/etc/sudoers.d/00-maze-wheel"
 }
