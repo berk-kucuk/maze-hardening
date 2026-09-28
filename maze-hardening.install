@@ -61,7 +61,23 @@ _tidy_old_wheel_rule() {
         && echo ">> maze-hardening: 10-maze-wheel replaced by the packaged 00-maze-wheel (same rule: wheel, with password)."
 }
 
+# /etc/sudoers.d is 0750 in the sudo package and in this one, but an installed
+# system inherits the live ISO's copy, which archiso created 0755. pacman never
+# changes the mode of a directory that already exists, so `pacman -Qkk` has
+# reported "Permissions mismatch" on every install since. Tighten it — only
+# ever from something looser, never loosening an admin's own choice.
+_fix_sudoers_dir() {
+    _d=/etc/sudoers.d
+    [ -d "$_d" ] || return 0
+    [ "$(stat -c '%u' "$_d")" = 0 ] || return 0
+    case "$(stat -c '%a' "$_d")" in
+        750|700|550|500) return 0 ;;
+    esac
+    chmod 0750 "$_d" && echo ">> maze-hardening: /etc/sudoers.d tightened to 0750 (as the sudo package ships it)."
+}
+
 post_install() {
+    _fix_sudoers_dir
     _apply_sysctl
     _silence_lan
     _unload_stray_wl
@@ -69,6 +85,7 @@ post_install() {
 }
 
 post_upgrade() {
+    _fix_sudoers_dir
     _apply_sysctl
     _silence_lan
     _unload_stray_wl

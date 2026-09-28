@@ -36,7 +36,7 @@
 
 pkgname=maze-hardening
 pkgver=1.0.0
-pkgrel=8
+pkgrel=10
 pkgdesc="Maze Linux kernel & network hardening defaults (sysctl profile, LAN-silence, Broadcom wl gating)"
 arch=('any')
 url="https://mazelinux.berkkucukk.com.tr"
@@ -70,4 +70,13 @@ package() {
   # root, and the directory itself belongs to the sudo package with 0750.
   chmod 0750 "${pkgdir}/etc/sudoers.d"
   chmod 0440 "${pkgdir}/etc/sudoers.d/00-maze-wheel"
+}
+
+# A sudoers file that does not parse takes sudo down for EVERY rule, and root is
+# locked on Maze — so a typo here would leave an installed machine with no admin
+# access short of a live USB. Refuse to build such a package at all.
+check() {
+  if command -v visudo >/dev/null 2>&1; then
+    visudo -cf "${startdir}/maze-hardening/etc/sudoers.d/00-maze-wheel"
+  fi
 }
