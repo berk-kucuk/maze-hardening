@@ -108,3 +108,9 @@ maze-hardening/
 ./build.sh
 ./build.sh --repo ../MazeLinux/localrepo
 ```
+
+## License
+
+Copyright © 2026 Berk Küçük
+
+Released under the GNU General Public License v3.0 — see [LICENSE](LICENSE).
