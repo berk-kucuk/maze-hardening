@@ -36,7 +36,7 @@
 
 pkgname=maze-hardening
 pkgver=1.0.0
-pkgrel=10
+pkgrel=11
 pkgdesc="Maze Linux kernel & network hardening defaults (sysctl profile, LAN-silence, Broadcom wl gating)"
 arch=('any')
 url="https://mazelinux.berkkucukk.com.tr"
